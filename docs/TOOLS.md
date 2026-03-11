@@ -114,6 +114,16 @@ Permanently delete a mind map.
   - `notebook_id` (string)
   - `mind_map_id` (string)
 
+## Chat Configuration
+
+### `chat_configure`
+Configure notebook chat settings.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `goal` (enum: "default", "learning_guide", "custom", optional): Chat goal mode.
+  - `custom_prompt` (string, optional): Required when goal is "custom" (max 10000 chars).
+  - `response_length` (enum: "default", "longer", "shorter", optional): Response length preference.
+
 ## Studio Content
 
 ### `audio_overview_create`
@@ -122,8 +132,69 @@ Generate a deep-dive audio overview (podcast style) for the notebook.
   - `notebook_id` (string)
   - `source_ids` (array of strings, optional): Specific sources to include.
   - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Custom instructions for the audio.
 
-### `studio_poll`
-Check the status of generated studio artifacts (Audio Overviews, etc.) and get download URLs.
+### `video_overview_create`
+Generate a video overview for the notebook.
 - **Parameters**:
   - `notebook_id` (string)
+  - `source_ids` (array of strings, optional): Specific sources to include.
+  - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Custom instructions for the video.
+
+### `report_create`
+Generate a written report from notebook sources.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `source_ids` (array of strings, optional): Specific sources to include.
+  - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Focus/instructions for the report.
+
+### `flashcards_create`
+Generate flashcards from notebook sources.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `source_ids` (array of strings, optional): Specific sources to include.
+  - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Focus/instructions.
+
+### `infographic_create`
+Generate an infographic from notebook sources.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `source_ids` (array of strings, optional): Specific sources to include.
+  - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Focus/instructions.
+
+### `slide_deck_create`
+Generate a slide deck from notebook sources.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `source_ids` (array of strings, optional): Specific sources to include.
+  - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Focus/instructions.
+
+### `data_table_create`
+Generate a data table from notebook sources.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `source_ids` (array of strings, optional): Specific sources to include.
+  - `language` (string, optional): Language code (default: "en").
+  - `focus_prompt` (string, optional): Focus/instructions.
+
+### `studio_poll`
+Check the status of generated studio artifacts and get download URLs.
+- **Parameters**:
+  - `notebook_id` (string)
+
+### `studio_delete`
+Delete a studio artifact.
+- **Parameters**:
+  - `notebook_id` (string)
+  - `artifact_id` (string)
+
+## System
+
+### `refresh_auth`
+Reload authentication cookies from disk. Run `notebooklm-mcp-server auth` in a terminal first if cookies are expired, then call this tool to pick up the new cookies.
+- **Parameters**: None
