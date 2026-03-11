@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+.mcp.json
+.DS_Store
+*.md
+docs/
+examples/
+scripts/
+coverage/
+.nyc_output/
+.vscode/
+.idea/
+*.log

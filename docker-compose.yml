@@ -1,0 +1,15 @@
+services:
+  notebooklm-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notebooklm-mcp-server
+    restart: unless-stopped
+    stdin_open: true
+    volumes:
+      # Mount host auth data so the container can read saved cookies
+      - ~/.notebooklm-mcp:/root/.notebooklm-mcp:ro
+    environment:
+      # Alternatively, pass cookies directly via env var:
+      # NOTEBOOKLM_COOKIES: "your-cookie-string-here"
+      NODE_ENV: production
