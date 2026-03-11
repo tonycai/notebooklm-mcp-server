@@ -183,45 +183,145 @@ claude skill add notebooklm -- "npx -y notebooklm-mcp-server start"
 
 ## 📖 Dokumentation
 
-Die folgenden Tools sind über diesen MCP-Server verfügbar:
+### 28 verfügbare Tools
 
-### 📒 Notebook-Verwaltung
+<details>
+<summary><b>📒 Notebook-Verwaltung</b> (4 Tools)</summary>
+
 | Tool               | Beschreibung                                           |
-| :----------------- | :----------------------------------------------------|
-| `notebook_list`    | Listet alle Notebooks in Ihrem Konto auf.             |
+| :----------------- | :----------------------------------------------------- |
+| `notebook_list`    | Listet alle Notebooks mit Quellen und Metadaten auf.  |
 | `notebook_create`  | Erstellt ein neues Notebook mit einem Titel.          |
 | `notebook_rename`  | Benennt ein vorhandenes Notebook um.                  |
-| `notebook_delete`  | Löscht ein Notebook (Warnung: Destruktiv).            |
+| `notebook_delete`  | Löscht ein Notebook dauerhaft (**irreversibel**).     |
 
-### 🖇️ Quellen-Verwaltung
-| Tool                     | Beschreibung                                           |
-| :----------------------- | :----------------------------------------------------- |
+</details>
+
+<details>
+<summary><b>🖇️ Quellen-Verwaltung</b> (6 Tools)</summary>
+
+| Tool                      | Beschreibung                                           |
+| :------------------------ | :----------------------------------------------------- |
 | `notebook_add_url`        | Fügt eine Website oder ein YouTube-Video als Quelle hinzu. |
 | `notebook_add_text`       | Fügt benutzerdefinierten Textinhalt als Quelle hinzu. |
 | `notebook_add_local_file` | Lädt eine lokale PDF-, Markdown- oder Textdatei hoch. |
-| `notebook_add_drive`      | Fügt eine Datei von Google Drive (Docs, Slides etc.) hinzu. |
-| `source_delete`           | Entfernt eine Quelle aus einem Notebook.               |
-| `source_sync`             | Synchronisiert eine Drive-Quelle, um die neueste Version zu erhalten. |
+| `notebook_add_drive`      | Fügt eine Google-Drive-Datei hinzu (Docs, Slides, Sheets, PDF). |
+| `source_delete`           | Entfernt eine Quelle dauerhaft (**irreversibel**).    |
+| `source_sync`             | Synchronisiert eine Drive-Quelle für die neueste Version. |
 
-### 🔍 Recherche & Abfrage
+</details>
+
+<details>
+<summary><b>🔍 Recherche & Abfrage</b> (5 Tools)</summary>
+
 | Tool               | Beschreibung                                           |
-| :----------------- | :---------------------------------------------------- |
-| `notebook_query`   | Stellt eine auf Quellen basierende Frage an ein bestimmtes Notebook. |
-| `research_start`   | Startet eine Web-/Drive-Rechercheaufgabe.             |
-| `research_poll`    | Fragt den Status und die Ergebnisse der Recherche ab. |
-| `research_import`  | Importiert Rechercheergebnisse als permanente Quellen. |
+| :----------------- | :----------------------------------------------------- |
+| `notebook_query`   | Fragt die KI zu vorhandenen Quellen eines Notebooks.  |
+| `chat_configure`   | Konfiguriert das Chat-Ziel (Standard, Lernbegleiter, benutzerdefiniert) und die Antwortlänge. |
+| `research_start`   | Startet Web- oder Drive-Recherche (`fast` ~30s oder `deep` ~5min). |
+| `research_poll`    | Fragt Status und entdeckte Quellen ab.                |
+| `research_import`  | Importiert entdeckte Quellen ins Notebook.            |
 
-### 🎨 Studio & Generierung
+</details>
+
+<details>
+<summary><b>🎨 Studio & Generierung</b> (9 Tools)</summary>
+
 | Tool                    | Beschreibung                                           |
-| :---------------------- | :---------------------------------------------------- |
+| :---------------------- | :----------------------------------------------------- |
 | `audio_overview_create` | Generiert eine Audio-Übersicht (Podcast).             |
-| `studio_poll`           | Prüft den Status generierter Audio-/Video-Artefakte.  |
-| `mind_map_generate`     | Generiert eine Mind-Map-JSON aus Quellen.             |
+| `video_overview_create` | Generiert eine Video-Übersicht.                       |
+| `report_create`         | Generiert einen schriftlichen Bericht aus Quellen.    |
+| `flashcards_create`     | Generiert Karteikarten aus Quellen.                   |
+| `infographic_create`    | Generiert eine Infografik aus Quellen.                |
+| `slide_deck_create`     | Generiert eine Folienpräsentation aus Quellen.        |
+| `data_table_create`     | Generiert eine Datentabelle aus Quellen.              |
+| `studio_poll`           | Prüft den Status aller Studio-Artefakte.              |
+| `studio_delete`         | Löscht ein Studio-Artefakt.                           |
 
-### ⚙️ System
+</details>
+
+<details>
+<summary><b>🧠 Mind Maps</b> (4 Tools)</summary>
+
+| Tool                | Beschreibung                                          |
+| :------------------ | :---------------------------------------------------- |
+| `mind_map_generate` | Generiert eine Mind-Map-JSON aus Quellen.             |
+| `mind_map_save`     | Speichert eine generierte Mind Map im Notebook.       |
+| `mind_map_list`     | Listet alle Mind Maps eines Notebooks auf.            |
+| `mind_map_delete`   | Löscht eine Mind Map aus einem Notebook.              |
+
+</details>
+
+<details>
+<summary><b>⚙️ System</b> (1 Tool)</summary>
+
 | Tool           | Beschreibung                                                        |
-| :------------- | :----------------------------------------------------------------- |
-| `refresh_auth` | **Interaktiv**: Öffnet einen Browser, um Ihre Google-Sitzung zu erneuern. Verwenden Sie dies, wenn die Tools fehlschlagen. |
+| :------------- | :------------------------------------------------------------------ |
+| `refresh_auth` | Lädt Cookies von der Festplatte neu. Führen Sie zuerst `notebooklm-mcp-server auth` aus, wenn sie abgelaufen sind. |
+
+</details>
+
+> Für vollständige Parameterdetails siehe [docs/TOOLS.md](docs/TOOLS.md).
+
+---
+
+## 💡 Verwendungsbeispiele
+
+Diese Beispiele zeigen, was Sie Ihren KI-Agenten fragen können, sobald der Server verbunden ist.
+
+### Grundlegender Ablauf — Erstellen, Quellen hinzufügen und Abfragen
+
+```
+"Erstelle ein Notebook namens 'Rust-Recherche' und füge diese Quellen hinzu:
+ - https://doc.rust-lang.org/book/
+ - https://www.youtube.com/watch?v=OX9HJsJUDxA
+Dann frage: Was sind die Hauptunterschiede zwischen Ownership und Borrowing?"
+```
+
+### Lokale Dateien hochladen
+
+```
+"Füge meine Notizen aus ./notes/architektur.md und ./docs/spec.pdf
+zum Notebook 'Projektdesign' hinzu und fasse dann die wichtigsten Entscheidungen zusammen."
+```
+
+### Web-Recherche
+
+```
+"In meinem Notebook 'KI-Sicherheit', starte eine tiefe Web-Recherche über
+'neueste Entwicklungen im KI-Alignment 2026' und importiere die
+besten Ergebnisse als Quellen."
+```
+
+### Studio-Inhalte generieren
+
+```
+"Generiere eine Podcast-Audio-Übersicht meines Notebooks 'Quartalsbericht',
+mit Fokus auf Umsatztrends, auf Deutsch."
+```
+
+```
+"Erstelle Karteikarten aus meinem Notebook 'Biologie 101' für die
+Quellen zur Zellteilung."
+```
+
+### Mind Maps
+
+```
+"Generiere eine Mind Map aus allen Quellen meines Notebooks 'Produktstrategie',
+dann speichere sie mit dem Titel 'Q2-Roadmap-Übersicht'."
+```
+
+### Mehrstufiger Agenten-Workflow
+
+```
+"1. Liste alle meine Notebooks auf
+ 2. Im Notebook 'Machine Learning', recherchiere 'Transformer-Architekturen 2026'
+ 3. Warte auf die Ergebnisse, dann importiere die 5 besten Quellen
+ 4. Frage das Notebook: 'Vergleiche die Aufmerksamkeitsmechanismen der importierten Papers'
+ 5. Generiere einen Bericht mit den Ergebnissen"
+```
 
 ---
 

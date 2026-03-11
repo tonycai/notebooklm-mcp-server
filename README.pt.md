@@ -183,45 +183,145 @@ claude skill add notebooklm -- "npx -y notebooklm-mcp-server start"
 
 ## 📖 Documentação
 
-As seguintes ferramentas estão disponíveis através deste servidor MCP:
+### 28 Ferramentas Disponíveis
 
-### 📒 Gerenciamento de Cadernos
+<details>
+<summary><b>📒 Gerenciamento de Cadernos</b> (4 ferramentas)</summary>
+
 | Ferramenta         | Descrição                                             |
 | :----------------- | :---------------------------------------------------- |
-| `notebook_list`    | Lista todos os cadernos da sua conta.                 |
+| `notebook_list`    | Lista todos os cadernos com fontes e metadados.       |
 | `notebook_create`  | Cria um novo caderno com um título.                   |
-| `notebook_rename`  | Renomeia um caderno existente.                         |
-| `notebook_delete`  | Exclui um caderno (Aviso: Destrutivo).                |
+| `notebook_rename`  | Renomeia um caderno existente.                        |
+| `notebook_delete`  | Exclui um caderno permanentemente (**irreversível**). |
 
-### 🖇️ Gerenciamento de Fontes
-| Ferramenta               | Descrição                                              |
-| :----------------------- | :----------------------------------------------------- |
+</details>
+
+<details>
+<summary><b>🖇️ Gerenciamento de Fontes</b> (6 ferramentas)</summary>
+
+| Ferramenta                | Descrição                                              |
+| :------------------------ | :----------------------------------------------------- |
 | `notebook_add_url`        | Adiciona um site ou vídeo do YouTube como fonte.       |
 | `notebook_add_text`       | Adiciona conteúdo de texto personalizado como fonte.   |
 | `notebook_add_local_file` | Faz upload de um arquivo local PDF, Markdown ou Texto. |
-| `notebook_add_drive`      | Adiciona um arquivo do Google Drive (Docs, Slides, etc). |
-| `source_delete`           | Remove uma fonte de um caderno.                        |
+| `notebook_add_drive`      | Adiciona um arquivo do Google Drive (Docs, Slides, Sheets, PDF). |
+| `source_delete`           | Remove uma fonte permanentemente (**irreversível**).   |
 | `source_sync`             | Sincroniza uma fonte do Drive para obter a versão mais recente. |
 
-### 🔍 Pesquisa e Consulta
+</details>
+
+<details>
+<summary><b>🔍 Pesquisa e Consulta</b> (5 ferramentas)</summary>
+
 | Ferramenta         | Descrição                                             |
 | :----------------- | :---------------------------------------------------- |
-| `notebook_query`   | Faz uma pergunta baseada em fontes a um caderno específico. |
-| `research_start`   | Inicia uma tarefa de pesquisa na web/drive.           |
-| `research_poll`    | Consulta o status e os resultados da pesquisa.         |
-| `research_import`  | Importa resultados de pesquisa como fontes permanentes. |
+| `notebook_query`   | Pergunte à IA sobre as fontes existentes em um caderno. |
+| `chat_configure`   | Configura o objetivo do chat (padrão, guia de aprendizado, personalizado) e o tamanho da resposta. |
+| `research_start`   | Inicia pesquisa web ou Drive (`fast` ~30s ou `deep` ~5min). |
+| `research_poll`    | Consulta o status e as fontes descobertas.            |
+| `research_import`  | Importa as fontes descobertas para o caderno.         |
 
-### 🎨 Estúdio e Geração
+</details>
+
+<details>
+<summary><b>🎨 Estúdio e Geração</b> (9 ferramentas)</summary>
+
 | Ferramenta              | Descrição                                             |
 | :---------------------- | :---------------------------------------------------- |
-| `audio_overview_create` | Gera um Audio Overview (podcast).                     |
-| `studio_poll`           | Verifica o status dos artefatos de áudio/vídeo gerados. |
-| `mind_map_generate`     | Gera um JSON de Mapa Mental a partir das fontes.      |
+| `audio_overview_create` | Gera um resumo em áudio (podcast).                    |
+| `video_overview_create` | Gera um resumo em vídeo.                              |
+| `report_create`         | Gera um relatório escrito a partir das fontes.        |
+| `flashcards_create`     | Gera cartões de estudo a partir das fontes.           |
+| `infographic_create`    | Gera um infográfico a partir das fontes.              |
+| `slide_deck_create`     | Gera uma apresentação de slides.                      |
+| `data_table_create`     | Gera uma tabela de dados a partir das fontes.         |
+| `studio_poll`           | Verifica o status de todos os artefatos de estúdio.   |
+| `studio_delete`         | Exclui um artefato de estúdio.                        |
 
-### ⚙️ Sistema
+</details>
+
+<details>
+<summary><b>🧠 Mapas Mentais</b> (4 ferramentas)</summary>
+
+| Ferramenta          | Descrição                                            |
+| :------------------ | :--------------------------------------------------- |
+| `mind_map_generate` | Gera um JSON de Mapa Mental a partir das fontes.     |
+| `mind_map_save`     | Salva um mapa mental gerado no caderno.              |
+| `mind_map_list`     | Lista todos os mapas mentais de um caderno.          |
+| `mind_map_delete`   | Exclui um mapa mental de um caderno.                 |
+
+</details>
+
+<details>
+<summary><b>⚙️ Sistema</b> (1 ferramenta)</summary>
+
 | Ferramenta     | Descrição                                                          |
 | :------------- | :----------------------------------------------------------------- |
-| `refresh_auth` | **Interativo**: Abre um navegador para renovar sua sessão do Google. Use isso se as ferramentas começarem a falhar. |
+| `refresh_auth` | Recarrega cookies do disco. Execute `notebooklm-mcp-server auth` primeiro se estiverem expirados. |
+
+</details>
+
+> Para detalhes completos dos parâmetros, consulte [docs/TOOLS.md](docs/TOOLS.md).
+
+---
+
+## 💡 Exemplos de Uso
+
+Estes exemplos mostram o que você pode pedir ao seu agente de IA uma vez que o servidor estiver conectado.
+
+### Fluxo Básico — Criar, Adicionar Fontes e Consultar
+
+```
+"Crie um caderno chamado 'Pesquisa Rust' e adicione estas fontes:
+ - https://doc.rust-lang.org/book/
+ - https://www.youtube.com/watch?v=OX9HJsJUDxA
+Depois pergunte: Quais são as diferenças chave entre ownership e borrowing?"
+```
+
+### Enviar Arquivos Locais
+
+```
+"Adicione minhas notas de ./notes/arquitetura.md e ./docs/spec.pdf
+ao caderno 'Design do Projeto', depois resuma as decisões principais."
+```
+
+### Pesquisa Web
+
+```
+"No meu caderno 'Segurança IA', inicie uma pesquisa web profunda sobre
+'últimos desenvolvimentos em alinhamento de IA 2026' e importe os
+melhores resultados como fontes."
+```
+
+### Gerar Conteúdo de Estúdio
+
+```
+"Gere um resumo em áudio estilo podcast do meu caderno 'Relatório Trimestral',
+focado em tendências de receita, em português."
+```
+
+```
+"Crie cartões de estudo do meu caderno 'Biologia 101' para as
+fontes sobre divisão celular."
+```
+
+### Mapas Mentais
+
+```
+"Gere um mapa mental de todas as fontes do meu caderno 'Estratégia de Produto',
+depois salve-o com o título 'Visão Geral do Roadmap Q2'."
+```
+
+### Fluxo de Trabalho Multi-etapas
+
+```
+"1. Liste todos os meus cadernos
+ 2. No caderno 'Machine Learning', pesquise 'arquiteturas transformer 2026'
+ 3. Aguarde os resultados, depois importe as 5 melhores fontes
+ 4. Consulte o caderno: 'Compare os mecanismos de atenção nos artigos importados'
+ 5. Gere um relatório com as conclusões"
+```
 
 ---
 

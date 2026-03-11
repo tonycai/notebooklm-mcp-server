@@ -183,45 +183,145 @@ claude skill add notebooklm -- "npx -y notebooklm-mcp-server start"
 
 ## 📖 Documentation
 
-Les outils suivants sont disponibles via ce serveur MCP :
+### 28 Outils Disponibles
 
-### 📒 Gestion des Carnets de Notes
+<details>
+<summary><b>📒 Gestion des Carnets</b> (4 outils)</summary>
+
 | Outil               | Description                                           |
 | :------------------ | :---------------------------------------------------- |
-| `notebook_list`     | Liste tous les carnets de notes de votre compte.      |
+| `notebook_list`     | Liste tous les carnets avec sources et métadonnées.   |
 | `notebook_create`   | Crée un nouveau carnet avec un titre.                 |
 | `notebook_rename`   | Renomme un carnet existant.                           |
-| `notebook_delete`   | Supprime un carnet (Attention : Destructif).          |
+| `notebook_delete`   | Supprime un carnet définitivement (**irréversible**). |
 
-### 🖇️ Gestion des Sources
-| Outil                    | Description                                              |
-| :----------------------- | :------------------------------------------------------- |
-| `notebook_add_url`       | Ajoute un site Web ou une vidéo YouTube comme source.    |
-| `notebook_add_text`      | Ajoute un contenu textuel personnalisé comme source.     |
-| `notebook_add_local_file`| Télécharge un fichier local PDF, Markdown ou Texte.      |
-| `notebook_add_drive`     | Ajoute un fichier Google Drive (Docs, Slides, etc.).     |
-| `source_delete`          | Supprime una source d'un carnet.                         |
-| `source_sync`            | Synchronise une source Drive pour obtenir la version la plus récente. |
+</details>
 
-### 🔍 Recherche & Requêtes
+<details>
+<summary><b>🖇️ Gestion des Sources</b> (6 outils)</summary>
+
+| Outil                     | Description                                              |
+| :------------------------ | :------------------------------------------------------- |
+| `notebook_add_url`        | Ajoute un site Web ou une vidéo YouTube comme source.    |
+| `notebook_add_text`       | Ajoute un contenu textuel personnalisé comme source.     |
+| `notebook_add_local_file` | Télécharge un fichier local PDF, Markdown ou Texte.      |
+| `notebook_add_drive`      | Ajoute un fichier Google Drive (Docs, Slides, Sheets, PDF). |
+| `source_delete`           | Supprime une source définitivement (**irréversible**).   |
+| `source_sync`             | Synchronise une source Drive pour obtenir la dernière version. |
+
+</details>
+
+<details>
+<summary><b>🔍 Recherche & Requêtes</b> (5 outils)</summary>
+
 | Outil               | Description                                           |
 | :------------------ | :---------------------------------------------------- |
-| `notebook_query`    | Pose une question basée sur les sources à un carnet spécifique. |
-| `research_start`    | Démarre une tâche de recherche Web/Drive.             |
-| `research_poll`     | Interroge l'état et les résultats de la recherche.    |
-| `research_import`   | Importe les résultats de recherche comme sources permanentes. |
+| `notebook_query`    | Interroge l'IA sur les sources existantes d'un carnet. |
+| `chat_configure`    | Configure l'objectif du chat (défaut, guide d'apprentissage, personnalisé) et la longueur de réponse. |
+| `research_start`    | Lance une recherche web ou Drive (`fast` ~30s ou `deep` ~5min). |
+| `research_poll`     | Interroge l'état et les sources découvertes.          |
+| `research_import`   | Importe les sources découvertes dans le carnet.       |
 
-### 🎨 Studio & Génération
+</details>
+
+<details>
+<summary><b>🎨 Studio & Génération</b> (9 outils)</summary>
+
 | Outil                    | Description                                           |
 | :----------------------- | :---------------------------------------------------- |
 | `audio_overview_create`  | Génère un aperçu audio (podcast).                     |
-| `studio_poll`            | Vérifie l'état des artefacts audio/vidéo générés.     |
-| `mind_map_generate`      | Génère un JSON de carte mentale à partir des sources. |
+| `video_overview_create`  | Génère un aperçu vidéo.                               |
+| `report_create`          | Génère un rapport écrit à partir des sources.         |
+| `flashcards_create`      | Génère des cartes mémoire à partir des sources.       |
+| `infographic_create`     | Génère une infographie à partir des sources.          |
+| `slide_deck_create`      | Génère un diaporama à partir des sources.             |
+| `data_table_create`      | Génère un tableau de données à partir des sources.    |
+| `studio_poll`            | Vérifie l'état de tous les artefacts studio.          |
+| `studio_delete`          | Supprime un artefact studio.                          |
 
-### ⚙️ Système
+</details>
+
+<details>
+<summary><b>🧠 Cartes Mentales</b> (4 outils)</summary>
+
+| Outil               | Description                                          |
+| :------------------ | :--------------------------------------------------- |
+| `mind_map_generate` | Génère un JSON de carte mentale à partir des sources. |
+| `mind_map_save`     | Sauvegarde une carte mentale dans le carnet.         |
+| `mind_map_list`     | Liste toutes les cartes mentales d'un carnet.        |
+| `mind_map_delete`   | Supprime une carte mentale d'un carnet.              |
+
+</details>
+
+<details>
+<summary><b>⚙️ Système</b> (1 outil)</summary>
+
 | Outil           | Description                                                        |
 | :-------------- | :----------------------------------------------------------------- |
-| `refresh_auth`  | **Interactif** : Ouvre un navigateur pour renouveler votre session Google. À utiliser si les outils commencent à échouer. |
+| `refresh_auth`  | Recharge les cookies depuis le disque. Lancez `notebooklm-mcp-server auth` d'abord si expirés. |
+
+</details>
+
+> Pour les détails complets des paramètres, consultez [docs/TOOLS.md](docs/TOOLS.md).
+
+---
+
+## 💡 Exemples d'Utilisation
+
+Ces exemples montrent ce que vous pouvez demander à votre agent IA une fois le serveur connecté.
+
+### Flux de Base — Créer, Ajouter des Sources et Interroger
+
+```
+"Crée un carnet appelé 'Recherche Rust' et ajoute ces sources :
+ - https://doc.rust-lang.org/book/
+ - https://www.youtube.com/watch?v=OX9HJsJUDxA
+Puis demande : Quelles sont les différences clés entre ownership et borrowing ?"
+```
+
+### Télécharger des Fichiers Locaux
+
+```
+"Ajoute mes notes de ./notes/architecture.md et ./docs/spec.pdf
+au carnet 'Conception du Projet', puis résume les décisions clés."
+```
+
+### Recherche Web
+
+```
+"Dans mon carnet 'Sécurité IA', lance une recherche web approfondie sur
+'derniers développements en alignement IA 2026' et importe les
+meilleurs résultats comme sources."
+```
+
+### Générer du Contenu Studio
+
+```
+"Génère un aperçu audio style podcast de mon carnet 'Rapport Trimestriel',
+axé sur les tendances de revenus, en français."
+```
+
+```
+"Crée des cartes mémoire de mon carnet 'Biologie 101' pour les
+sources sur la division cellulaire."
+```
+
+### Cartes Mentales
+
+```
+"Génère une carte mentale de toutes les sources de mon carnet 'Stratégie Produit',
+puis sauvegarde-la avec le titre 'Aperçu de la Feuille de Route Q2'."
+```
+
+### Flux de Travail Multi-étapes
+
+```
+"1. Liste tous mes carnets
+ 2. Dans le carnet 'Machine Learning', recherche 'architectures transformer 2026'
+ 3. Attends les résultats, puis importe les 5 meilleures sources
+ 4. Interroge le carnet : 'Compare les mécanismes d'attention des articles importés'
+ 5. Génère un rapport avec les conclusions"
+```
 
 ---
 
