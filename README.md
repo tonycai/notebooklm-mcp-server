@@ -37,11 +37,12 @@
 </p>
 
 <p align="center">
-  <a href="#installation">Installation</a> • 
-  <a href="#authentication">Authentication</a> • 
-  <a href="#quick-start-claude-desktop">Quick Start</a> • 
-  <a href="#claude-code-skill">Claude Code</a> • 
+  <a href="#installation">Installation</a> •
+  <a href="#authentication">Authentication</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#-docker-deployment">Docker</a> •
   <a href="#documentation">Documentation</a> •
+  <a href="#architecture">Architecture</a> •
   <a href="#development">Development</a>
 </p>
 
@@ -325,15 +326,133 @@ then save it with the title 'Q2 Roadmap Overview'."
 
 ---
 
-## 🛠️ Development
+## 🐳 Docker Deployment
 
-To contribute or build from source:
+Run the server in a container for isolated, reproducible deployments.
+
+### Prerequisites
+
+Authenticate on the host first (requires a browser):
 
 ```bash
-git clone https://github.com/moodRobotics/notebook-mcp-server.git
+npx notebooklm-mcp-server auth
+```
+
+### Build and Run
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Or run interactively:
+
+```bash
+docker compose run --rm notebooklm-mcp-server
+```
+
+The `docker-compose.yml` mounts `~/.notebooklm-mcp` read-only into the container so it can access your saved session cookies. Alternatively, pass cookies directly via the `NOTEBOOKLM_COOKIES` environment variable.
+
+> [!NOTE]
+> The Docker image uses a multi-stage build with `node:20-slim` and skips the Playwright/Chromium download, resulting in a ~117MB image. Authentication must be done on the host since it requires a browser.
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐     stdio      ┌──────────────────────────┐
+│   MCP Client    │◄──────────────►│   MCP Server (server.ts) │
+│ (Claude, Cursor │                │   - Tool definitions     │
+│  Cline, etc.)   │                │   - Input validation     │
+└─────────────────┘                │   - Error sanitization   │
+                                   └────────────┬─────────────┘
+                                                │
+                                   ┌────────────▼─────────────┐
+                                   │  NotebookLMClient        │
+                                   │  (client.ts)             │
+                                   │   - batchexecute RPC     │
+                                   │   - CSRF token mgmt      │
+                                   │   - Cookie auto-reload   │
+                                   │   - Response parsing     │
+                                   └────────────┬─────────────┘
+                                                │ HTTPS
+                                   ┌────────────▼─────────────┐
+                                   │  Google NotebookLM       │
+                                   │  (notebooklm.google.com) │
+                                   └──────────────────────────┘
+```
+
+### Core Components
+
+| File | Purpose |
+|------|---------|
+| `src/server.ts` | MCP server — registers 28 tools, validates inputs, dispatches to client |
+| `src/client.ts` | NotebookLM API client — batchexecute RPC, response parsing, query streaming |
+| `src/auth.ts` | Playwright-based browser authentication, cookie extraction and storage |
+| `src/constants.ts` | RPC IDs, API endpoints, build label, timeouts |
+| `src/update.ts` | Auto-update checker with platform-specific handling |
+| `src/index.ts` | CLI entry point (commander) — `server` and `auth` subcommands |
+
+### How It Works
+
+Since Google does not provide a public API for NotebookLM, this server uses **reverse-engineered RPC calls**:
+
+1. **Authentication**: Playwright opens a real browser for Google login; session cookies are saved to `~/.notebooklm-mcp/auth.json` with restrictive file permissions (`0600`)
+2. **CSRF Token**: On first API call, fetches the main page HTML and extracts the `SNlM0e` CSRF token and `FdrFJe` session ID
+3. **RPC Calls**: Constructs `batchexecute` payloads with specific RPC IDs (e.g., `wXbhsf` for list notebooks) and POSTs to `/_/LabsTailwindUi/data/batchexecute`
+4. **Response Parsing**: Strips the anti-XSSI prefix (`)]}'`), parses the chunked response format, and extracts results by RPC ID
+5. **Query Streaming**: Uses a separate streaming endpoint for notebook queries, extracting the longest answer from chunked responses
+6. **Auto-Recovery**: On auth failure (401/403 or RPC error 16), automatically reloads cookies from disk and retries up to 2 times
+
+---
+
+## 🔒 Security
+
+- **Path Traversal Protection**: Local file uploads are restricted to the current working directory
+- **Credential Storage**: Auth cookies are saved with `0600` permissions (owner read/write only) in a `0700` directory
+- **Input Validation**: All 28 tool handlers validate required parameters before processing
+- **Error Sanitization**: Axios errors are sanitized to prevent cookie/header leakage in MCP responses
+- **Command Injection Prevention**: Windows auto-updater rejects arguments containing shell metacharacters
+- **HTTPS Only**: All communication with Google NotebookLM is over HTTPS
+
+---
+
+## 🛠️ Development
+
+### Build from Source
+
+```bash
+git clone https://github.com/tonycai/notebooklm-mcp-server.git
+cd notebooklm-mcp-server
 npm install
 npm run build
 ```
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run build` | Bundle with esbuild to `dist/` |
+| `npm run typecheck` | TypeScript type checking (no emit) |
+| `npm run auth` | Run interactive authentication |
+| `npm start` | Start the server from `dist/` |
+| `npm run docs:check` | Verify translations are in sync |
+
+### Project Structure
+
+```
+src/
+├── index.ts        # CLI entry point
+├── server.ts       # MCP server + 28 tool handlers
+├── client.ts       # NotebookLM API client (~1475 lines)
+├── auth.ts         # Playwright browser authentication
+├── auth-cli.ts     # Auth CLI with progress UI
+├── constants.ts    # RPC IDs, endpoints, timeouts
+└── update.ts       # Auto-update checker
+```
+
+---
 
 ## 🌐 Localization
 

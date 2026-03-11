@@ -325,15 +325,108 @@ depois salve-o com o título 'Visão Geral do Roadmap Q2'."
 
 ---
 
-## 🛠️ Desenvolvimento
+## 🐳 Implantação com Docker
 
-Para contribuir ou construir a partir do código fonte:
+Execute o servidor em um contêiner para implantações isoladas e reproduzíveis.
+
+### Pré-requisitos
+
+Autentique-se no host primeiro (requer navegador):
 
 ```bash
-git clone https://github.com/moodRobotics/notebook-mcp-server.git
+npx notebooklm-mcp-server auth
+```
+
+### Construir e Executar
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Ou executar interativamente:
+
+```bash
+docker compose run --rm notebooklm-mcp-server
+```
+
+O `docker-compose.yml` monta `~/.notebooklm-mcp` em modo somente leitura no contêiner para acessar os cookies de sessão. Alternativamente, passe os cookies pela variável de ambiente `NOTEBOOKLM_COOKIES`.
+
+> [!NOTE]
+> A imagem Docker usa uma construção multi-estágio com `node:20-slim` e pula o download do Playwright/Chromium, resultando em uma imagem de ~117MB. A autenticação deve ser feita no host, pois requer navegador.
+
+---
+
+## 🏗️ Arquitetura
+
+```
+┌─────────────────┐     stdio      ┌──────────────────────────┐
+│   Cliente MCP   │◄──────────────►│   Servidor MCP           │
+│ (Claude, Cursor │                │   (server.ts)            │
+│  Cline, etc.)   │                │   - Definição de tools   │
+└─────────────────┘                │   - Validação de inputs  │
+                                   └────────────┬─────────────┘
+                                                │
+                                   ┌────────────▼─────────────┐
+                                   │  NotebookLMClient        │
+                                   │  (client.ts)             │
+                                   │   - RPC batchexecute     │
+                                   │   - Gestão CSRF          │
+                                   │   - Recarga de cookies   │
+                                   └────────────┬─────────────┘
+                                                │ HTTPS
+                                   ┌────────────▼─────────────┐
+                                   │  Google NotebookLM       │
+                                   │  (notebooklm.google.com) │
+                                   └──────────────────────────┘
+```
+
+### Componentes Principais
+
+| Arquivo | Função |
+|---------|--------|
+| `src/server.ts` | Servidor MCP — registra 28 ferramentas, valida inputs, despacha para o cliente |
+| `src/client.ts` | Cliente API do NotebookLM — RPC batchexecute, parsing de respostas, streaming de consultas |
+| `src/auth.ts` | Autenticação via Playwright, extração e armazenamento de cookies |
+| `src/constants.ts` | IDs de RPC, endpoints, build label, timeouts |
+| `src/update.ts` | Verificador de atualizações automáticas |
+| `src/index.ts` | Ponto de entrada CLI (commander) — subcomandos `server` e `auth` |
+
+---
+
+## 🔒 Segurança
+
+- **Proteção contra Path Traversal**: Uploads de arquivos locais são restritos ao diretório de trabalho atual
+- **Armazenamento de Credenciais**: Cookies salvos com permissões `0600` (leitura/escrita apenas do proprietário) em diretório `0700`
+- **Validação de Inputs**: Os 28 manipuladores de ferramentas validam parâmetros obrigatórios antes do processamento
+- **Sanitização de Erros**: Erros do Axios são sanitizados para prevenir vazamento de cookies/headers nas respostas MCP
+- **Prevenção de Injeção de Comandos**: O atualizador do Windows rejeita argumentos com metacaracteres de shell
+- **Apenas HTTPS**: Toda comunicação com o Google NotebookLM é via HTTPS
+
+---
+
+## 🛠️ Desenvolvimento
+
+### Construir a partir do Código Fonte
+
+```bash
+git clone https://github.com/tonycai/notebooklm-mcp-server.git
+cd notebooklm-mcp-server
 npm install
 npm run build
 ```
+
+### Scripts Disponíveis
+
+| Script | Descrição |
+|--------|-----------|
+| `npm run build` | Empacotar com esbuild para `dist/` |
+| `npm run typecheck` | Verificação de tipos TypeScript |
+| `npm run auth` | Executar autenticação interativa |
+| `npm start` | Iniciar o servidor a partir de `dist/` |
+| `npm run docs:check` | Verificar sincronização das traduções |
+
+---
 
 ## 📄 Licença
 

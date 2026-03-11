@@ -1,43 +1,66 @@
-# Project Roadmap: notebook-mcp-server
+# Project Roadmap: notebooklm-mcp-server
 
-The mission of `notebook-mcp-server` is to provide the most robust, Node.js-native bridge to Google NotebookLM, enabling seamless integration with any MCP-compatible environment.
+The mission of `notebooklm-mcp-server` is to provide the most robust, Node.js-native bridge to Google NotebookLM, enabling seamless integration with any MCP-compatible environment.
 
-## 🟢 Phase 1: Foundation & Stability (Q1 2026)
-*Goal: Solidify the core RPC communication and basic toolset.*
-- [x] Reverse-engineer core `batchexecute` RPC protocol.
-- [x] Port essential tools: `notebook_list`, `notebook_create`, `notebook_delete`.
-- [x] Implement initial Playwright-based authentication.
-- [ ] Add comprehensive error handling for token expiration.
-- [ ] Implement robust retry logic for network timeouts.
-- [ ] Unit testing for RPC payload builders and parsers.
+## Phase 1: Foundation & Stability (Completed)
+- [x] Reverse-engineer core `batchexecute` RPC protocol
+- [x] Implement tools: `notebook_list`, `notebook_create`, `notebook_delete`, `notebook_rename`
+- [x] Implement Playwright-based browser authentication
+- [x] Auto-recovery with cookie reload on 401/403/RPC error 16 (up to 2 retries)
+- [x] CSRF token and session ID extraction from main page HTML
+- [x] Bundle with esbuild to resolve CJS/ESM interop issues
 
-## 🟡 Phase 2: Enhanced Source Management
-*Goal: Expand the types of data that can be ingested.*
-- [ ] Support for **YouTube URL** ingestion with transcript extraction.
-- [ ] Support for **Local File** uploads (Direct PDF/Markdown parsing).
-- [ ] Batch source addition (uploading multiple files in one command).
-- [ ] Source sync status monitoring (polling for processing completion).
-- [ ] Source deletion and renaming tools.
+## Phase 2: Source Management (Completed)
+- [x] YouTube URL ingestion (`notebook_add_url` with auto-detection)
+- [x] Website URL ingestion
+- [x] Local file uploads: PDF (via pdf-parse), Markdown, Text (`notebook_add_local_file`)
+- [x] Google Drive source integration: Docs, Slides, Sheets, PDF (`notebook_add_drive`)
+- [x] Source deletion (`source_delete`)
+- [x] Drive source sync (`source_sync`)
+- [x] Pasted text as source (`notebook_add_text`)
 
-## 🟠 Phase 3: Advanced Interaction & Memory
-*Goal: Improve the AI's ability to reason over data.*
-- [ ] **Streaming Responses**: Enable real-time text streaming for `notebook_query`.
-- [ ] **Context Management**: Auto-trimming conversation history for very long chats.
-- [ ] **Research Mode Integration**: Full implementation of "Deep Research" with status polling.
-- [ ] **Mind Map Generation**: Expose the NotebookLM mind map creation as a tool.
+## Phase 3: Advanced Interaction (Completed)
+- [x] Streaming query responses via `GenerateFreeFormStreamed` endpoint
+- [x] Auto-fetch source IDs from notebook when not provided
+- [x] Conversation continuity via `conversation_id`
+- [x] Chat configuration: goal mode (default, learning guide, custom) and response length
+- [x] Research mode: fast (~30s, web/drive) and deep (~5min, web only)
+- [x] Research polling and source import
+- [x] Mind map generation, saving, listing, and deletion
 
-## 🔴 Phase 4: Developer & User Experience
-*Goal: Make the server easier to deploy and manage.*
-- [ ] **NPM Global Release**: Publish `notebook-mcp-server` to npmjs.com.
-- [ ] **Interactive CLI**: Improve `notebook-mcp-auth` with better terminal progress bars and status checks.
-- [ ] **Multi-Account Support**: Allow switching between different browser profiles/cookies.
-- [ ] **Docker Support**: Containerized version of the server for headless environments.
+## Phase 4: Studio Content Generation (Completed)
+- [x] Audio Overview (podcast) generation
+- [x] Video Overview generation
+- [x] Written report generation
+- [x] Flashcard generation
+- [x] Infographic generation
+- [x] Slide deck generation
+- [x] Data table generation
+- [x] Studio artifact polling and deletion
 
-## 🚀 Phase 5: Future Horizons
-*Goal: Explore broader integrations.*
-- [ ] Plugin system for custom post-processing of AI answers.
-- [ ] Integration with other "BoQ" services (Google Docs/Keep) if APIs available.
-- [ ] Web-based Dashboard for managing saved cookies and server status.
+## Phase 5: Developer & User Experience (Completed)
+- [x] Published to npmjs.com as `notebooklm-mcp-server`
+- [x] Auto-update checker with platform-specific handling (Unix + Windows)
+- [x] Docker support with multi-stage build (117MB image, no Chromium)
+- [x] Docker Compose for easy deployment
+- [x] Multi-language documentation (EN, ES, FR, PT, DE) with sync checker
+- [x] Claude Code skill integration
+- [x] Gemini CLI integration
+- [x] VS Code (Cline, MCP Client) and Antigravity integration guides
+
+## Phase 6: Security Hardening (Completed)
+- [x] Path traversal protection for local file uploads
+- [x] Restrictive file permissions (0600/0700) for credential storage
+- [x] Input validation for all 28 tool handlers
+- [x] Error sanitization to prevent cookie/header leakage
+- [x] Command injection prevention in Windows auto-updater
+
+## Future
+- [ ] Unit and integration test suite
+- [ ] Streaming responses to MCP client (when SDK supports it)
+- [ ] Multi-account support (switching between Google profiles)
+- [ ] Web-based dashboard for server status and cookie management
+- [ ] Plugin system for custom post-processing of AI answers
 
 ---
 *Note: This roadmap is subject to change based on updates to Google's internal APIs.*
