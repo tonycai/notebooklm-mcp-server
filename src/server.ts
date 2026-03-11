@@ -8,7 +8,7 @@ import { NotebookLMClient } from "./client.js";
 import { AuthManager } from "./auth.js";
 import chalk from "chalk";
 
-const VERSION = "3.0.5";
+const VERSION = "3.0.7";
 
 const server = new Server(
   {
@@ -456,6 +456,57 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
+/**
+ * Validate that a required argument is a non-empty string.
+ * Throws a user-friendly error if validation fails.
+ */
+function requireString(args: Record<string, unknown> | undefined, key: string, toolName: string): string {
+  const value = args?.[key];
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`Missing or invalid required parameter '${key}' for tool '${toolName}'. Expected a non-empty string.`);
+  }
+  return value;
+}
+
+/**
+ * Validate that a required argument is a boolean.
+ */
+function requireBoolean(args: Record<string, unknown> | undefined, key: string, toolName: string): boolean {
+  const value = args?.[key];
+  if (typeof value !== 'boolean') {
+    throw new Error(`Missing or invalid required parameter '${key}' for tool '${toolName}'. Expected a boolean.`);
+  }
+  return value;
+}
+
+/**
+ * Validate that an optional argument, if present, is a string array.
+ */
+function optionalStringArray(args: Record<string, unknown> | undefined, key: string): string[] | undefined {
+  const value = args?.[key];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || !value.every(v => typeof v === 'string')) {
+    return undefined;
+  }
+  return value as string[];
+}
+
+/**
+ * Sanitize an error for safe return to the MCP client.
+ * Strips headers, cookies, and other sensitive request/response details.
+ */
+function sanitizeError(error: any): string {
+  if (!error) return 'Unknown error';
+
+  // For Axios errors, only return the message — never the config (which contains cookies/headers)
+  if (error.isAxiosError || error.config || error.response) {
+    const status = error.response?.status ? ` (HTTP ${error.response.status})` : '';
+    return `${error.message || 'Request failed'}${status}`;
+  }
+
+  return error.message || String(error);
+}
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
@@ -478,40 +529,49 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "notebook_create": {
-        const newId = await client.createNotebook(args?.title as string);
-        return { content: [{ type: "text", text: JSON.stringify({ status: "success", notebook_id: newId, title: args?.title }) }] };
+        const title = requireString(args, 'title', name);
+        const newId = await client.createNotebook(title);
+        return { content: [{ type: "text", text: JSON.stringify({ status: "success", notebook_id: newId, title }) }] };
       }
 
       case "notebook_delete": {
-        if (!args?.confirm) {
+        const notebookId = requireString(args, 'notebook_id', name);
+        const confirm = requireBoolean(args, 'confirm', name);
+        if (!confirm) {
           return { content: [{ type: "text", text: "Deletion requires confirm=true. This action is IRREVERSIBLE." }], isError: true };
         }
-        await client.deleteNotebook(args?.notebook_id as string);
+        await client.deleteNotebook(notebookId);
         return { content: [{ type: "text", text: "Notebook deleted." }] };
       }
 
       case "notebook_rename": {
-        await client.renameNotebook(args?.notebook_id as string, args?.title as string);
-        return { content: [{ type: "text", text: `Notebook renamed to: ${args?.title}` }] };
+        const notebookId = requireString(args, 'notebook_id', name);
+        const title = requireString(args, 'title', name);
+        await client.renameNotebook(notebookId, title);
+        return { content: [{ type: "text", text: `Notebook renamed to: ${title}` }] };
       }
 
       // ===================== Source Operations =====================
       case "notebook_add_url": {
-        const sourceIdUrl = await client.addUrlSource(args?.notebook_id as string, args?.url as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const url = requireString(args, 'url', name);
+        const sourceIdUrl = await client.addUrlSource(notebookId, url);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", source_id: sourceIdUrl }) }] };
       }
 
       case "notebook_add_text": {
-        const sourceIdText = await client.addTextSource(
-          args?.notebook_id as string,
-          args?.title as string,
-          args?.content as string
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const title = requireString(args, 'title', name);
+        const content = requireString(args, 'content', name);
+        const sourceIdText = await client.addTextSource(notebookId, title, content);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", source_id: sourceIdText }) }] };
       }
 
       case "notebook_add_drive": {
-        const docType = (args?.doc_type as string) || 'doc';
+        const notebookId = requireString(args, 'notebook_id', name);
+        const documentId = requireString(args, 'document_id', name);
+        const title = typeof args?.title === 'string' && args.title.trim() ? args.title : 'Drive Document';
+        const docType = (typeof args?.doc_type === 'string' ? args.doc_type : 'doc');
         const mimeMap: Record<string, string> = {
           doc: 'application/vnd.google-apps.document',
           slides: 'application/vnd.google-apps.presentation',
@@ -519,191 +579,185 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           pdf: 'application/pdf',
         };
         const mimeType = mimeMap[docType] || mimeMap['doc'];
-        const driveId = await client.addDriveSource(
-          args?.notebook_id as string,
-          args?.document_id as string,
-          (args?.title as string) || 'Drive Document',
-          mimeType
-        );
+        const driveId = await client.addDriveSource(notebookId, documentId, title, mimeType);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", source_id: driveId }) }] };
       }
 
       case "notebook_add_local_file": {
-        const fileSourceId = await client.uploadLocalFile(args?.notebook_id as string, args?.path as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const filePath = requireString(args, 'path', name);
+        const fileSourceId = await client.uploadLocalFile(notebookId, filePath);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", source_id: fileSourceId }) }] };
       }
 
       case "source_delete": {
-        if (!args?.confirm) {
+        const sourceId = requireString(args, 'source_id', name);
+        const confirm = requireBoolean(args, 'confirm', name);
+        if (!confirm) {
           return { content: [{ type: "text", text: "Deletion requires confirm=true. This action is IRREVERSIBLE." }], isError: true };
         }
-        // Note: deleteSource only needs sourceId (no notebookId), matching Python
-        await client.deleteSource(args?.source_id as string);
-        return { content: [{ type: "text", text: `Source ${args?.source_id} deleted.` }] };
+        await client.deleteSource(sourceId);
+        return { content: [{ type: "text", text: `Source ${sourceId} deleted.` }] };
       }
 
       case "source_sync": {
-        // Note: syncDriveSource only needs sourceId (no notebookId), matching Python
-        const syncResult = await client.syncDriveSource(args?.source_id as string);
+        const sourceId = requireString(args, 'source_id', name);
+        const syncResult = await client.syncDriveSource(sourceId);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", result: syncResult }) }] };
       }
 
       // ===================== Query =====================
       case "notebook_query": {
-        const queryResult = await client.query(
-          args?.notebook_id as string,
-          args?.query as string,
-          args?.source_ids as string[] | undefined,
-          args?.conversation_id as string | undefined
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const query = requireString(args, 'query', name);
+        const sourceIds = optionalStringArray(args, 'source_ids');
+        const conversationId = typeof args?.conversation_id === 'string' ? args.conversation_id : undefined;
+        const queryResult = await client.query(notebookId, query, sourceIds, conversationId);
         return { content: [{ type: "text", text: JSON.stringify(queryResult, null, 2) }] };
       }
 
       // ===================== Chat Configuration =====================
       case "chat_configure": {
-        await client.configureChatGoal(
-          args?.notebook_id as string,
-          (args?.goal as any) || 'default',
-          args?.custom_prompt as string | undefined,
-          (args?.response_length as any) || 'default'
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const goal = typeof args?.goal === 'string' ? args.goal as 'default' | 'learning_guide' | 'custom' : 'default';
+        const customPrompt = typeof args?.custom_prompt === 'string' ? args.custom_prompt : undefined;
+        const responseLength = typeof args?.response_length === 'string' ? args.response_length as 'default' | 'longer' | 'shorter' : 'default';
+        await client.configureChatGoal(notebookId, goal, customPrompt, responseLength);
         return { content: [{ type: "text", text: "Chat configuration updated." }] };
       }
 
       // ===================== Research =====================
       case "research_start": {
-        const taskInfo = await client.startResearch(
-          args?.notebook_id as string,
-          args?.query as string,
-          (args?.source as 'web' | 'drive') || 'web',
-          (args?.mode as 'fast' | 'deep') || 'fast'
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const query = requireString(args, 'query', name);
+        const source = typeof args?.source === 'string' ? args.source as 'web' | 'drive' : 'web';
+        const mode = typeof args?.mode === 'string' ? args.mode as 'fast' | 'deep' : 'fast';
+        const taskInfo = await client.startResearch(notebookId, query, source, mode);
         return { content: [{ type: "text", text: JSON.stringify({ status: "started", task: taskInfo }, null, 2) }] };
       }
 
       case "research_poll": {
-        const researchResult = await client.pollResearch(args?.notebook_id as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const researchResult = await client.pollResearch(notebookId);
         return { content: [{ type: "text", text: JSON.stringify(researchResult, null, 2) }] };
       }
 
       case "research_import": {
-        const imported = await client.importResearchSources(
-          args?.notebook_id as string,
-          args?.task_id as string,
-          args?.sources as any[]
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const taskId = requireString(args, 'task_id', name);
+        if (!Array.isArray(args?.sources)) {
+          throw new Error(`Missing or invalid required parameter 'sources' for tool '${name}'. Expected an array.`);
+        }
+        const imported = await client.importResearchSources(notebookId, taskId, args.sources);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", imported_count: imported.length, sources: imported }, null, 2) }] };
       }
 
       // ===================== Studio =====================
       case "audio_overview_create": {
-        const audioInfo = await client.createAudioOverview(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          1, // formatCode
-          2, // lengthCode
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const audioInfo = await client.createAudioOverview(notebookId, sourceIds, language, 1, 2, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: audioInfo }, null, 2) }] };
       }
 
       case "video_overview_create": {
-        const videoInfo = await client.createVideoOverview(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          1, // formatCode
-          1, // styleCode
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const videoInfo = await client.createVideoOverview(notebookId, sourceIds, language, 1, 1, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: videoInfo }, null, 2) }] };
       }
 
       case "report_create": {
-        const reportInfo = await client.createReport(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const reportInfo = await client.createReport(notebookId, sourceIds, language, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: reportInfo }, null, 2) }] };
       }
 
       case "flashcards_create": {
-        const fcInfo = await client.createFlashcards(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const fcInfo = await client.createFlashcards(notebookId, sourceIds, language, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: fcInfo }, null, 2) }] };
       }
 
       case "infographic_create": {
-        const igInfo = await client.createInfographic(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          1, // orientationCode
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const igInfo = await client.createInfographic(notebookId, sourceIds, language, 1, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: igInfo }, null, 2) }] };
       }
 
       case "slide_deck_create": {
-        const sdInfo = await client.createSlideDeck(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const sdInfo = await client.createSlideDeck(notebookId, sourceIds, language, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: sdInfo }, null, 2) }] };
       }
 
       case "data_table_create": {
-        const dtInfo = await client.createDataTable(
-          args?.notebook_id as string,
-          (args?.source_ids as string[]) || [],
-          (args?.language as string) || 'en',
-          (args?.focus_prompt as string) || ''
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const language = typeof args?.language === 'string' ? args.language : 'en';
+        const focusPrompt = typeof args?.focus_prompt === 'string' ? args.focus_prompt : '';
+        const dtInfo = await client.createDataTable(notebookId, sourceIds, language, focusPrompt);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", artifact: dtInfo }, null, 2) }] };
       }
 
       case "studio_poll": {
-        const studioStatus = await client.pollStudioStatus(args?.notebook_id as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const studioStatus = await client.pollStudioStatus(notebookId);
         return { content: [{ type: "text", text: JSON.stringify({ artifacts: studioStatus }, null, 2) }] };
       }
 
       case "studio_delete": {
-        await client.deleteStudioArtifact(args?.notebook_id as string, args?.artifact_id as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const artifactId = requireString(args, 'artifact_id', name);
+        await client.deleteStudioArtifact(notebookId, artifactId);
         return { content: [{ type: "text", text: "Artifact deleted." }] };
       }
 
       // ===================== Mind Maps =====================
       case "mind_map_generate": {
-        const mmData = await client.generateMindMap(args?.source_ids as string[]);
+        const sourceIds = optionalStringArray(args, 'source_ids');
+        if (!sourceIds || sourceIds.length === 0) {
+          throw new Error(`Missing or invalid required parameter 'source_ids' for tool '${name}'. Expected a non-empty string array.`);
+        }
+        const mmData = await client.generateMindMap(sourceIds);
         return { content: [{ type: "text", text: JSON.stringify(mmData, null, 2) }] };
       }
 
       case "mind_map_save": {
-        const savedMm = await client.saveMindMap(
-          args?.notebook_id as string,
-          args?.mind_map_json as string,
-          args?.source_ids as string[],
-          (args?.title as string) || 'Mind Map'
-        );
+        const notebookId = requireString(args, 'notebook_id', name);
+        const mindMapJson = requireString(args, 'mind_map_json', name);
+        const sourceIds = optionalStringArray(args, 'source_ids') || [];
+        const title = typeof args?.title === 'string' && args.title.trim() ? args.title : 'Mind Map';
+        const savedMm = await client.saveMindMap(notebookId, mindMapJson, sourceIds, title);
         return { content: [{ type: "text", text: JSON.stringify({ status: "success", mind_map: savedMm }, null, 2) }] };
       }
 
       case "mind_map_list": {
-        const maps = await client.listMindMaps(args?.notebook_id as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const maps = await client.listMindMaps(notebookId);
         return { content: [{ type: "text", text: JSON.stringify({ mind_maps: maps }, null, 2) }] };
       }
 
       case "mind_map_delete": {
-        await client.deleteMindMap(args?.notebook_id as string, args?.mind_map_id as string);
+        const notebookId = requireString(args, 'notebook_id', name);
+        const mindMapId = requireString(args, 'mind_map_id', name);
+        await client.deleteMindMap(notebookId, mindMapId);
         return { content: [{ type: "text", text: "Mind Map deleted." }] };
       }
 
@@ -725,9 +779,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error: any) {
-    console.error(chalk.red(`Tool error [${name}]:`), error);
+    console.error(chalk.red(`Tool error [${name}]:`), error.message || error);
     return {
-      content: [{ type: "text", text: `Error: ${error.message || String(error)}` }],
+      content: [{ type: "text", text: `Error: ${sanitizeError(error)}` }],
       isError: true,
     };
   }

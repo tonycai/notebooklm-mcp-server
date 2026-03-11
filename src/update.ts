@@ -16,9 +16,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * relaunches the application.
  */
 function updateOnWindows(args: string[]): Promise<never> {
-  const argsStr = args.map(a => `"${a}"`).join(' ');
   const nodeExe = process.argv[0];
   const pid = process.pid;
+
+  // Security: reject arguments containing shell metacharacters to prevent command injection
+  const dangerousPattern = /["&|<>^%!()`;]/;
+  for (const arg of args) {
+    if (dangerousPattern.test(arg)) {
+      throw new Error(`Update aborted: argument contains unsafe characters: ${arg}`);
+    }
+  }
+  if (dangerousPattern.test(nodeExe)) {
+    throw new Error(`Update aborted: node executable path contains unsafe characters: ${nodeExe}`);
+  }
+
+  const argsStr = args.map(a => `"${a}"`).join(' ');
 
   // Batch script that:
   //  1. Waits for the current process (by PID) to terminate

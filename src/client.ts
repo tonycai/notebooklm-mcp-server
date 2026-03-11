@@ -1257,6 +1257,17 @@ export class NotebookLMClient {
 
   async uploadLocalFile(notebookId: string, filePath: string): Promise<string> {
     const absolutePath = path.resolve(filePath);
+
+    // Security: prevent path traversal — only allow files under the current working directory
+    const cwd = process.cwd();
+    const normalizedPath = path.normalize(absolutePath);
+    if (!normalizedPath.startsWith(cwd + path.sep) && normalizedPath !== cwd) {
+      throw new Error(
+        `Security: file path must be within the working directory (${cwd}). ` +
+        `Resolved path "${normalizedPath}" is outside the allowed directory.`
+      );
+    }
+
     if (!fs.existsSync(absolutePath)) {
       throw new Error(`File not found: ${filePath}`);
     }

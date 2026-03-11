@@ -116,10 +116,10 @@ export class AuthManager {
     };
 
     if (!fs.existsSync(path.dirname(this.authPath))) {
-      fs.mkdirSync(path.dirname(this.authPath), { recursive: true });
+      fs.mkdirSync(path.dirname(this.authPath), { recursive: true, mode: 0o700 });
     }
 
-    fs.writeFileSync(this.authPath, JSON.stringify(authData, null, 2));
+    fs.writeFileSync(this.authPath, JSON.stringify(authData, null, 2), { mode: 0o600 });
     
     console.error(`Authentication successful! Cookies saved to ${this.authPath}`);
     await browser.close();
